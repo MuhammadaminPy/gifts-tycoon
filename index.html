@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gifts Tycoon</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+
+        :root {
+            --primary-color: #4CAF50;
+            --secondary-color: #8BC34A;
+            --accent-color: #FF9800;
+            --gold-color: #FFD700;
+            --silver-color: #C0C0C0;
+            --common-color: #8B7355;
+            --bg-sky: #87CEEB;
+            --bg-ground: #8B7355;
+            --bg-underground: #5D4E37;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(180deg, var(--bg-sky) 0%, #98D8E8 40%, var(--bg-ground) 40%, var(--bg-underground) 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Spring Background Elements */
+        .mountain {
+            position: absolute;
+            bottom: 60%;
+            width: 0;
+            height: 0;
+            border-left: 150px solid transparent;
+            border-right: 150px solid transparent;
+            border-bottom: 250px solid #A8D8D8;
+            z-index: 0;
+        }
+
+        .mountain:nth-child(1) { left: -50px; border-bottom-color: #B8E8E8; }
+        .mountain:nth-child(2) { left: 30%; border-bottom-color: #98C8C8; }
+        .mountain:nth-child(3) { right: -50px; border-bottom-color: #A8D8D8; }
+
+        .sun {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background: radial-gradient(circle, #FFD700 0%, #FFA500 70%);
+            border-radius: 50%;
+            box-shadow: 0 0 40px #FFD700, 0 0 80px #FFA500;
+            animation: pulse 3s ease-in-out infinite;
+            z-index: 1;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.9; }
+        }
+
+        .cloud {
+            position: absolute;
+            background: white;
+            border-radius: 50px;
+            opacity: 0.8;
+            animation: float 20s linear infinite;
+        }
+
+        .cloud::before, .cloud::after {
+            content: '';
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+        }
+
+        .cloud:nth-child(1) { width: 100px; height: 40px; top: 50px; left: -100px; }
+        .cloud:nth-child(1)::before { width: 50px; height: 50px; top: -25px; left: 10px; }
+        .cloud:nth-child(1)::after { width: 40px; height: 40px; top: -15px; left: 50px; }
+
+        .cloud:nth-child(2) { width: 80px; height: 35px; top: 100px; left: -80px; animation-delay: 10s; }
+        .cloud:nth-child(2)::before { width: 40px; height: 40px; top: -20px; left: 8px; }
+        .cloud:nth-child(2)::after { width: 35px; height: 35px; top: -12px; left: 40px; }
+
+        @keyframes float {
+            from { transform: translateX(0); }
+            to { transform: translateX(calc(100vw + 200px)); }
+        }
+
+        /* Game Container */
+        .game-container {
+            position: relative;
+            z-index: 10;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 10px;
+            padding-bottom: 80px;
+        }
+
+        /* Header Stats */
+        .header-stats {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            color: white;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255,255,255,0.2);
+            padding: 8px 12px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+
+        .coin-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 16px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+
+        .coin-common { background: linear-gradient(135deg, #8B7355, #A08060); }
+        .coin-silver { background: linear-gradient(135deg, #C0C0C0, #E8E8E8); color: #333; }
+        .coin-gold { background: linear-gradient(135deg, #FFD700, #FFA500); color: #333; }
+
+        .idle-rate {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        /* Mining Area */
+        .mining-area {
+            background: linear-gradient(180deg, #8B7355 0%, #5D4E37 100%);
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .shaft-container {
+            background: linear-gradient(180deg, #4a5568 0%, #2d3748 100%);
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 10px;
+            position: relative;
+            min-height: 200px;
+        }
+
+        .shaft-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            color: white;
+        }
+
+        .shaft-level {
+            background: var(--accent-color);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+
+        .elevator {
+            width: 60px;
+            height: 80px;
+            background: linear-gradient(180deg, #718096 0%, #4a5568 100%);
+            border: 3px solid #2d3748;
+            border-radius: 8px;
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            top: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: top 2s ease-in-out;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        .elevator.moving {
+            animation: elevatorMove 2s ease-in-out;
+        }
+
+        @keyframes elevatorMove {
+            0%, 100% { top: 60px; }
+            50% { top: 150px; }
+        }
+
+        .miner {
+            width: 40px;
+            height: 50px;
+            position: absolute;
+            bottom: 20px;
+            animation: mine 1s ease-in-out infinite;
+        }
+
+        .miner-body {
+            width: 30px;
+            height: 35px;
+            background: #E87600;
+            border-radius: 5px;
+            position: absolute;
+            bottom: 0;
+            left: 5px;
+        }
+
+        .miner-head {
+            width: 25px;
+            height: 25px;
+            background: #FFE4C4;
+            border-radius: 50%;
+            position: absolute;
+            top: 0;
+            left: 7.5px;
+        }
+
+        .miner-helmet {
+            width: 28px;
+            height: 10px;
+            background: #FF6B00;
+            border-radius: 5px 5px 0 0;
+            position: absolute;
+            top: -5px;
+            left: 6px;
+        }
+
+        @keyframes mine {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        .coin-drop {
+            position: absolute;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            animation: dropCoin 1.5s ease-in-out infinite;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+
+        @keyframes dropCoin {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(100px) scale(0.5); opacity: 0; }
+        }
+
+        /* Upgrade Buttons */
+        .upgrade-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .upgrade-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .upgrade-btn:active {
+            transform: translateY(0);
+        }
+
+        .upgrade-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-radius: 20px 20px 0 0;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+            padding: 10px;
+            z-index: 100;
+            display: flex;
+            justify-content: space-around;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            padding: 10px 15px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.3s;
+            color: #4a5568;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background: #f7fafc;
+            color: #667eea;
+        }
+
+        .nav-icon {
+            font-size: 24px;
+        }
+
+        .nav-label {
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            max-width: 500px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2d3748;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #718096;
+        }
+
+        /* Profile Section */
+        .profile-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            padding: 20px;
+            color: white;
+            margin-bottom: 15px;
+        }
+
+        .profile-balance {
+            font-size: 32px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .coin-balance-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .coin-balance-item {
+            background: rgba(255,255,255,0.2);
+            padding: 12px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Crafting Grid */
+        .crafting-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .craft-card {
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .craft-card:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+
+        .craft-card.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .craft-arrow {
+            font-size: 24px;
+            color: #667eea;
+            margin: 10px 0;
+        }
+
+        /* Leaderboard */
+        .leaderboard-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 12px;
+            background: #f7fafc;
+            border-radius: 10px;
+            margin-bottom: 8px;
+        }
+
+        .leaderboard-rank {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            background: #e2e8f0;
+        }
+
+        .leaderboard-rank.gold { background: linear-gradient(135deg, #FFD700, #FFA500); color: white; }
+        .leaderboard-rank.silver { background: linear-gradient(135deg, #C0C0C0, #E8E8E8); color: #333; }
+        .leaderboard-rank.bronze { background: linear-gradient(135deg, #CD7F32, #B87333); color: white; }
+
+        .leaderboard-info {
+            flex: 1;
+        }
+
+        .leaderboard-name {
+            font-weight: bold;
+            color: #2d3748;
+        }
+
+        .leaderboard-value {
+            color: #718096;
+            font-size: 14px;
+        }
+
+        /* TON Connect Button */
+        .ton-connect-btn {
+            background: linear-gradient(135deg, #0098EA 0%, #0077B6 100%);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+            width: 100%;
+            margin: 10px 0;
+            transition: transform 0.2s;
+        }
+
+        .ton-connect-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 152, 234, 0.4);
+        }
+
+        /* Happy Hour Banner */
+        .happy-hour-banner {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            text-align: center;
+            animation: glow 2s ease-in-out infinite;
+            display: none;
+        }
+
+        .happy-hour-banner.active {
+            display: block;
+        }
+
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(245, 87, 108, 0.5); }
+            50% { box-shadow: 0 0 40px rgba(245, 87, 108, 0.8); }
+        }
+
+        /* Referral Link */
+        .referral-box {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            display: flex;
+            gap: 10px;
+        }
+
+        .referral-input {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .copy-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        /* Particles */
+        .particle {
+            position: absolute;
+            pointer-events: none;
+            animation: particleFloat 1s ease-out forwards;
+        }
+
+        @keyframes particleFloat {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(-100px) scale(0); opacity: 0; }
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .game-container {
+                padding: 5px;
+            }
+            
+            .stats-row {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            
+            .stat-item {
+                flex: 1;
+                min-width: calc(50% - 4px);
+            }
+        }
+
+        /* Loader */
+        .loader {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .loader.active {
+            display: flex;
+        }
+
+        .loader-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #2d3748;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            opacity: 0;
+            transition: all 0.3s;
+            z-index: 1500;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .toast.success { background: #48bb78; }
+        .toast.error { background: #f56565; }
+    </style>
+</head>
+<body>
+    <!-- Background Elements -->
+    <div class="sun"></div>
+    <div class="cloud"></div>
+    <div class="cloud"></div>
+    <div class="mountain"></div>
+    <div class="mountain"></div>
+    <div class="mountain"></div>
+
+    <!-- Game Container -->
+    <div class="game-container">
+        <!-- Happy Hour Banner -->
+        <div class="happy-hour-banner" id="happyHourBanner">
+            <i class="fas fa-star"></i> СЧАСТЛИВЫЙ ЧАС! <i class="fas fa-star"></i><br>
+            <small>+10% к редким монетам | +15% скорость | -5% цена улучшений</small>
+        </div>
+
+        <!-- Header Stats -->
+        <div class="header-stats">
+            <div class="stats-row">
+                <div class="stat-item">
+                    <div class="coin-icon coin-common">$</div>
+                    <div>
+                        <div id="commonBalance">0</div>
+                        <div class="idle-rate" id="commonRate">0/сек</div>
+                    </div>
+                </div>
+                <div class="stat-item">
+                    <div class="coin-icon coin-silver">S</div>
+                    <div>
+                        <div id="silverBalance">0</div>
+                        <div class="idle-rate" id="silverRate">0/сек</div>
+                    </div>
+                </div>
+                <div class="stat-item">
+                    <div class="coin-icon coin-gold">G</div>
+                    <div>
+                        <div id="goldBalance">0</div>
+                        <div class="idle-rate" id="goldRate">0/сек</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mining Area -->
+        <div class="mining-area">
+            <div class="shaft-container" id="shaftContainer">
+                <div class="shaft-header">
+                    <span><i class="fas fa-mountain"></i> Шахта #1</span>
+                    <span class="shaft-level" id="shaftLevel">Уровень 1</span>
+                </div>
+                
+                <div class="elevator" id="elevator">
+                    <i class="fas fa-arrow-up" style="color: white; font-size: 24px;"></i>
+                </div>
+
+                <div class="miner" id="miner">
+                    <div class="miner-helmet"></div>
+                    <div class="miner-head"></div>
+                    <div class="miner-body"></div>
+                </div>
+            </div>
+
+            <button class="upgrade-btn" id="upgradeShaftBtn" onclick="upgradeShaft()">
+                <i class="fas fa-arrow-up"></i> Улучшить шахту
+                <span id="shaftUpgradeCost">100 $</span>
+            </button>
+
+            <button class="upgrade-btn" id="upgradeElevatorBtn" onclick="upgradeElevator()">
+                <i class="fas fa-arrow-up"></i> Улучшить лифт
+                <span id="elevatorUpgradeCost">150 $</span>
+            </button>
+
+            <button class="upgrade-btn" id="hireManagerBtn" onclick="hireManager()">
+                <i class="fas fa-user-tie"></i> Нанять менеджера
+                <span id="managerCost">500 $</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+        <div class="nav-item" onclick="openModal('exploreModal')">
+            <i class="nav-icon fas fa-compass"></i>
+            <span class="nav-label">Исследовать</span>
+        </div>
+        <div class="nav-item" onclick="openModal('minersModal')">
+            <i class="nav-icon fas fa-trophy"></i>
+            <span class="nav-label">Майнеры</span>
+        </div>
+        <div class="nav-item" onclick="openModal('craftModal')">
+            <i class="nav-icon fas fa-hammer"></i>
+            <span class="nav-label">Крафт</span>
+        </div>
+        <div class="nav-item" onclick="openModal('profileModal')">
+            <i class="nav-icon fas fa-user"></i>
+            <span class="nav-label">Профиль</span>
+        </div>
+        <div class="nav-item" onclick="openModal('walletModal')">
+            <i class="nav-icon fas fa-wallet"></i>
+            <span class="nav-label">Кошелек</span>
+        </div>
+    </nav>
+
+    <!-- Explore Modal -->
+    <div class="modal" id="exploreModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title"><i class="fas fa-compass"></i> Исследовать</h2>
+                <button class="modal-close" onclick="closeModal('exploreModal')">&times;</button>
+            </div>
+            <div style="text-align: center; padding: 40px;">
+                <i class="fas fa-hard-hat" style="font-size: 64px; color: #cbd5e0; margin-bottom: 20px;"></i>
+                <h3 style="color: #4a5568; margin-bottom: 10px;">СКОРО...</h3>
+                <p style="color: #718096;">Новые шахты и локации уже в разработке!</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Miners Leaderboard Modal -->
+    <div class="modal" id="minersModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title"><i class="fas fa-trophy"></i> Топ-100 Майнеров</h2>
+                <button class="modal-close" onclick="closeModal('minersModal')">&times;</button>
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <select id="leaderboardType" onchange="loadLeaderboard()" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid #e2e8f0;">
+                    <option value="common">Обычные монеты</option>
+                    <option value="silver">Серебряные монеты</option>
+                    <option value="gold">Золотые монеты</option>
+                </select>
+            </div>
+
+            <div id="leaderboardList">
+                <!-- Leaderboard items will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Crafting Modal -->
+    <div class="modal" id="craftModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title"><i class="fas fa-hammer"></i> Крафт монет</h2>
+                <button class="modal-close" onclick="closeModal('craftModal')">&times;</button>
+            </div>
+
+            <div class="crafting-grid">
+                <div class="craft-card" id="craftCommonToSilver" onclick="craftSilver()">
+                    <div style="display: flex; justify-content: center; gap: 5px; margin-bottom: 10px;">
+                        <div class="coin-icon coin-common" style="width: 40px; height: 40px;">$</div>
+                        <div class="coin-icon coin-common" style="width: 40px; height: 40px;">$</div>
+                    </div>
+                    <div style="font-size: 24px; color: #667eea;">↓</div>
+                    <div class="coin-icon coin-silver" style="width: 50px; height: 50px; margin: 10px auto;">S</div>
+                    <div style="margin-top: 10px; font-weight: bold; color: #4a5568;">8 → 1</div>
+                    <div style="font-size: 12px; color: #718096; margin-top: 5px;">Шанс: 90%</div>
+                    <div style="font-size: 12px; color: #48bb78; margin-top: 5px;">Доступно: <span id="commonForCraft">0</span></div>
+                </div>
+
+                <div class="craft-card" id="craftSilverToGold" onclick="craftGold()">
+                    <div style="display: flex; justify-content: center; gap: 5px; margin-bottom: 10px;">
+                        <div class="coin-icon coin-silver" style="width: 40px; height: 40px;">S</div>
+                        <div class="coin-icon coin-silver" style="width: 40px; height: 40px;">S</div>
+                    </div>
+                    <div style="font-size: 24px; color: #667eea;">↓</div>
+                    <div class="coin-icon coin-gold" style="width: 50px; height: 50px; margin: 10px auto;">G</div>
+                    <div style="margin-top: 10px; font-weight: bold; color: #4a5568;">4 → 1</div>
+                    <div style="font-size: 12px; color: #718096; margin-top: 5px;">Шанс: 90%</div>
+                    <div style="font-size: 12px; color: #48bb78; margin-top: 5px;">Доступно: <span id="silverForCraft">0</span></div>
+                </div>
+            </div>
+
+            <div class="craft-card" style="opacity: 0.6; cursor: not-allowed;">
+                <div class="coin-icon coin-gold" style="width: 50px; height: 50px; margin: 0 auto;">G</div>
+                <div style="font-size: 24px; color: #cbd5e0; margin: 10px 0;">↓</div>
+                <div style="font-weight: bold; color: #a0aec0;">Скоро обновление</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile Modal -->
+    <div class="modal" id="profileModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title"><i class="fas fa-user"></i> Профиль</h2>
+                <button class="modal-close" onclick="closeModal('profileModal')">&times;</button>
+            </div>
+
+            <div class="profile-section">
+                <div style="font-size: 14px; opacity: 0.9;">Общий баланс</div>
+                <div class="profile-balance" id="totalBalance">0 TON</div>
+            </div>
+
+            <h3 style="margin: 20px 0 10px; color: #2d3748;">Баланс монет</h3>
+            <div class="coin-balance-list">
+                <div class="coin-balance-item">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div class="coin-icon coin-common">$</div>
+                        <span>Обычные</span>
+                    </div>
+                    <span id="profileCommon">0</span>
+                </div>
+                <div class="coin-balance-item">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div class="coin-icon coin-silver">S</div>
+                        <span>Серебряные</span>
+                    </div>
+                    <span id="profileSilver">0</span>
+                </div>
+                <div class="coin-balance-item">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div class="coin-icon coin-gold">G</div>
+                        <span>Золотые</span>
+                    </div>
+                    <span id="profileGold">0</span>
+                </div>
+            </div>
+
+            <h3 style="margin: 20px 0 10px; color: #2d3748;">Реферальная программа</h3>
+            <div class="referral-box">
+                <input type="text" class="referral-input" id="referralLink" readonly value="https://t.me/giftstycoon_bot?start=ref123">
+                <button class="copy-btn" onclick="copyReferral()">Копировать</button>
+            </div>
+            <div style="background: #f7fafc; padding: 12px; border-radius: 8px; margin-top: 10px;">
+                <div style="font-size: 14px; color: #4a5568;">
+                    <i class="fas fa-gift" style="color: #48bb78;"></i> 
+                    Приглашенных: <strong id="referralsCount">0</strong>
+                </div>
+                <div style="font-size: 12px; color: #718096; margin-top: 5px;">
+                    +1 серебряная монета за каждого друга
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Wallet Modal -->
+    <div class="modal" id="walletModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title"><i class="fas fa-wallet"></i> Кошелек</h2>
+                <button class="modal-close" onclick="closeModal('walletModal')">&times;</button>
+            </div>
+
+            <h3 style="margin: 20px 0 10px; color: #2d3748;">Обмен на TON</h3>
+            <div style="background: #f7fafc; padding: 15px; border-radius: 10px; margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <span>1 Серебряная = 0.001 TON</span>
+                    <span>1 Золотая = 0.005 TON</span>
+                </div>
+                <div style="font-size: 12px; color: #718096;">
+                    Минимальный обмен: 100 монет
+                </div>
+            </div>
+
+            <div style="margin: 15px 0;">
+                <label style="display: block; margin-bottom: 8px; color: #4a5568; font-weight: 500;">
+                    Тип монеты
+                </label>
+                <select id="exchangeCoinType" style="width: 100%; padding: 12px; border-radius: 8px; border: 2px solid #e2e8f0;">
+                    <option value="silver">Серебряные</option>
+                    <option value="gold">Золотые</option>
+                </select>
+            </div>
+
+            <div style="margin: 15px 0;">
+                <label style="display: block; margin-bottom: 8px; color: #4a5568; font-weight: 500;">
+                    Количество
+                </label>
+                <input type="number" id="exchangeAmount" placeholder="Минимум 100" min="100" 
+                       style="width: 100%; padding: 12px; border-radius: 8px; border: 2px solid #e2e8f0;">
+            </div>
+
+            <div style="background: #edf2f7; padding: 12px; border-radius: 8px; margin: 15px 0;">
+                <div style="display: flex; justify-content: space-between;">
+                    <span>Вы получите:</span>
+                    <strong id="exchangeReceive">0 TON</strong>
+                </div>
+            </div>
+
+            <button class="ton-connect-btn" onclick="exchangeCoins()">
+                <i class="fas fa-exchange-alt"></i> Обменять
+            </button>
+
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #e2e8f0;">
+                <h3 style="margin-bottom: 15px; color: #2d3748;">Подключить TON кошелек</h3>
+                <div id="ton-connect"></div>
+            </div>
+
+            <h3 style="margin: 20px 0 10px; color: #2d3748;">Пополнение</h3>
+            <button class="ton-connect-btn" style="background: linear-gradient(135deg, #7928CA, #FF0080);" onclick="topupStars()">
+                <i class="fas fa-star"></i> Пополнить через Telegram Stars
+            </button>
+            <div style="font-size: 12px; color: #718096; text-align: center; margin-top: 10px;">
+                Минимум 100 звезд
+            </div>
+        </div>
+    </div>
+
+    <!-- Loader -->
+    <div class="loader" id="loader">
+        <div class="loader-spinner"></div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script src="game.js"></script>
+</body>
+</html>
