@@ -62,7 +62,7 @@ const ECONOMY = {
 };
 
 // API Base URL (replace with your backend)
-const API_URL = 'https://your-backend.com/api';
+const API_URL = 'https://quinsied-undeliberatively-kerry.ngrok-free.dev';
 
 // Initialize Game
 async function initGame() {
@@ -663,4 +663,5 @@ window.onclick = function(event) {
 };
 
 // Initialize on load
+
 window.addEventListener('load', initGame);
